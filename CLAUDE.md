@@ -162,3 +162,61 @@ wails build
 | 日志策略 | 10MB 循环覆盖 | 限制磁盘占用，保留最新信息 |
 | 规则数量 | 无限制 | 用户自由控制 |
 | 端口范围 | 1024-65535 | 避免需要管理员权限 |
+
+## 开发工作流
+
+### 任务领取与提交规范
+
+1. **领取任务**：从 `tasks.md` 中选择一个待办任务，标记为进行中
+2. **完成开发**：编写代码实现功能
+3. **完整测试**：
+   - 功能测试：验证核心功能正常工作
+   - 边界测试：测试边界条件和错误处理
+   - 跨平台验证（如适用）
+4. **提交代码**：撰写规范的 commit 信息并提交
+
+### Commit 信息规范
+
+遵循 Conventional Commits 格式：
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**类型 (type):**
+- `feat`: 新功能
+- `fix`: Bug 修复
+- `chore`: 构建/工具链配置
+- `docs`: 文档更新
+- `refactor`: 代码重构
+- `test`: 测试相关
+
+**示例:**
+```
+feat(forwarder): implement TCP port forwarding engine
+
+- Add tcp listener with configurable local port
+- Implement connection forwarding to target host:port
+- Add connection logging with byte tracking
+- Handle concurrent connections with goroutines
+
+Tested:
+- Single connection forwarding works correctly
+- Multiple concurrent connections handled properly
+- Connection errors logged appropriately
+- Port binding conflicts detected and reported
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+```
+
+### 环境配置
+
+开发工具和缓存文件统一保存在 `D:\Code` 目录：
+
+- **Go 安装路径**: `D:\Code\Go`
+- **Go GOPATH**: `D:\Code\Go\go-packages`
+- **Wails 缓存**: `D:\Code\Wails\cache`
