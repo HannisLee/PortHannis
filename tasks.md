@@ -27,16 +27,16 @@
 
 ## Phase 2: 核心数据结构
 
-- [ ] 2.1 创建 `config/types.go`
-  - [ ] 定义 `ForwardRule` 结构体
-  - [ ] 定义 `LogEntry` 结构体
-  - [ ] 定义 `Config` 结构体（包含规则列表）
+- [x] 2.1 创建 `config/types.go`
+  - [x] 定义 `ForwardRule` 结构体
+  - [x] 定义 `LogEntry` 结构体
+  - [x] 定义 `Config` 结构体（包含规则列表）
 
-- [ ] 2.2 创建 `config/manager.go`
-  - [ ] 实现 `LoadConfig()` - 从 JSON 文件加载配置
-  - [ ] 实现 `SaveConfig()` - 保存配置到 JSON 文件
-  - [ ] 实现 `GetConfigDir()` - 获取平台相关配置目录
-  - [ ] 实现 `GetLogsDir()` - 获取日志目录
+- [x] 2.2 创建 `config/manager.go`
+  - [x] 实现 `LoadConfig()` - 从 JSON 文件加载配置
+  - [x] 实现 `SaveConfig()` - 保存配置到 JSON 文件
+  - [x] 实现 `GetConfigDir()` - 获取平台相关配置目录
+  - [x] 实现 `GetLogsDir()` - 获取日志目录
 
 ## Phase 3: 端口转发引擎
 
