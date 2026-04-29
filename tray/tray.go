@@ -11,7 +11,6 @@ var iconData []byte
 
 type Callbacks struct {
 	OnShow func()
-	OnHide func()
 	OnQuit func()
 }
 
@@ -33,9 +32,6 @@ func Run(cb Callbacks) {
 						cb.OnShow()
 					}
 				case <-mQuit.ClickedCh:
-					if cb.OnQuit != nil {
-						cb.OnQuit()
-					}
 					systray.Quit()
 					return
 				}

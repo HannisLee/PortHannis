@@ -75,22 +75,22 @@
 
 ## Phase 5: 主应用逻辑
 
-- [ ] 5.1 创建 `app.go`
-  - [ ] 定义 `App` 结构体
-  - [ ] 实现 `NewApp()` - 初始化应用
-  - [ ] 实现 `Startup()` - Wails 启动时调用
-  - [ ] 实现 `Shutdown()` - Wails 关闭时调用（最小化到托盘）
+- [x] 5.1 创建 `app.go`
+  - [x] 定义 `App` 结构体
+  - [x] 实现 `NewApp()` - 初始化应用
+  - [x] 实现 `Startup()` - Wails 启动时调用
+  - [x] 实现 `Shutdown()` - Wails 关闭时调用（最小化到托盘）
 
-- [ ] 5.2 实现 Wails Bindings - 规则管理
-  - [ ] `GetRules() []ForwardRule`
-  - [ ] `AddRule(localPort, targetHost, targetPort) error`
-  - [ ] `DeleteRule(id) error`
-  - [ ] `ToggleRule(id, enabled) error`
+- [x] 5.2 实现 Wails Bindings - 规则管理
+  - [x] `GetRules() []ForwardRule`
+  - [x] `AddRule(localPort, targetHost, targetPort) error`
+  - [x] `DeleteRule(id) error`
+  - [x] `ToggleRule(id, enabled) error`
 
-- [ ] 5.3 实现 Wails Bindings - 日志和状态
-  - [ ] `GetLogs(ruleID, limit) []LogEntry`
-  - [ ] `ClearLogs(ruleID) error`
-  - [ ] `GetStatus() map[string]bool`
+- [x] 5.3 实现 Wails Bindings - 日志和状态
+  - [x] `GetLogs(ruleID, limit) []LogEntry`
+  - [x] `ClearLogs(ruleID) error`
+  - [x] `GetStatus() map[string]bool`
 
 ## Phase 6: 前端 UI
 
