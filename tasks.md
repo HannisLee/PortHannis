@@ -40,25 +40,25 @@
 
 ## Phase 3: 端口转发引擎
 
-- [ ] 3.1 创建 `forwarder/rule.go`
-  - [ ] 定义 `RuleState` 结构体（运行时状态）
-  - [ ] 实现 `NewRuleState()` - 创建规则状态
-  - [ ] 实现 `Start()` - 启动转发监听
-  - [ ] 实现 `Stop()` - 停止转发监听
+- [x] 3.1 创建 `forwarder/rule.go`
+  - [x] 定义 `RuleState` 结构体（运行时状态）
+  - [x] 实现 `NewRuleState()` - 创建规则状态
+  - [x] 实现 `Start()` - 启动转发监听
+  - [x] 实现 `Stop()` - 停止转发监听
 
-- [ ] 3.2 创建 `forwarder/logger.go`
-  - [ ] 实现 `CircularLogger` - 循环缓冲日志器
-  - [ ] 实现 `Write()` - 检查文件大小并写入
-  - [ ] 实现 `ReadLogs()` - 读取日志条目
-  - [ ] 实现 `Clear()` - 清空日志文件
+- [x] 3.2 创建 `forwarder/logger.go`
+  - [x] 实现 `CircularLogger` - 循环缓冲日志器
+  - [x] 实现 `Write()` - 检查文件大小并写入
+  - [x] 实现 `ReadLogs()` - 读取日志条目
+  - [x] 实现 `Clear()` - 清空日志文件
 
-- [ ] 3.3 创建 `forwarder/engine.go`
-  - [ ] 定义 `Engine` 结构体
-  - [ ] 实现 `NewEngine()` - 创建转发引擎
-  - [ ] 实现 `StartRule()` - 启动单个规则
-  - [ ] 实现 `StopRule()` - 停止单个规则
-  - [ ] 实现 `RestartRule()` - 重启单个规则
-  - [ ] 实现 `handleConnection()` - 处理单个 TCP 连接转发
+- [x] 3.3 创建 `forwarder/engine.go`
+  - [x] 定义 `Engine` 结构体
+  - [x] 实现 `NewEngine()` - 创建转发引擎
+  - [x] 实现 `StartRule()` - 启动单个规则
+  - [x] 实现 `StopRule()` - 停止单个规则
+  - [x] 实现 `RestartRule()` - 重启单个规则
+  - [x] 实现 `handleConnection()` - 处理单个 TCP 连接转发
 
 ## Phase 4: 系统托盘
 
