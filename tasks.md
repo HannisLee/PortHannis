@@ -94,34 +94,34 @@
 
 ## Phase 6: 前端 UI
 
-- [ ] 6.1 设置 Svelte 项目结构
-  - [ ] 安装必要依赖（tailwindcss 或其他 UI 库）
+- [x] 6.1 设置 Svelte 项目结构
+  - [x] 安装必要依赖（tailwindcss 或其他 UI 库）
 
-- [ ] 6.2 创建 `src/lib/api.ts`
-  - [ ] 封装所有 Wails Go 方法调用
+- [x] 6.2 创建 `src/lib/api.ts`
+  - [x] 封装所有 Wails Go 方法调用
 
-- [ ] 6.3 创建 `src/App.svelte` - 主界面
-  - [ ] 页面布局设计
-  - [ ] 规则列表容器
-  - [ ] 添加规则按钮
+- [x] 6.3 创建 `src/App.svelte` - 主界面
+  - [x] 页面布局设计
+  - [x] 规则列表容器
+  - [x] 添加规则按钮
 
-- [ ] 6.4 创建 `src/components/RuleForm.svelte`
-  - [ ] 表单：本地端口、目标 IP、目标端口
-  - [ ] 输入验证（端口范围、IP 格式）
-  - [ ] 提交和取消按钮
+- [x] 6.4 创建 `src/components/RuleForm.svelte`
+  - [x] 表单：本地端口、目标 IP、目标端口
+  - [x] 输入验证（端口范围、IP 格式）
+  - [x] 提交和取消按钮
 
-- [ ] 6.5 创建 `src/components/RuleItem.svelte`
-  - [ ] 单条规则显示卡片
-  - [ ] 状态指示器（🟢 运行中 / ⚫ 已停止）
-  - [ ] 查看日志按钮
-  - [ ] 启用/禁用开关
-  - [ ] 删除按钮
+- [x] 6.5 创建 `src/components/RuleItem.svelte`
+  - [x] 单条规则显示卡片
+  - [x] 状态指示器（🟢 运行中 / ⚫ 已停止）
+  - [x] 查看日志按钮
+  - [x] 启用/禁用开关
+  - [x] 删除按钮
 
-- [ ] 6.6 创建 `src/components/LogViewer.svelte`
-  - [ ] 日志列表显示
-  - [ ] 时间戳、来源、流量、状态
-  - [ ] 清空日志按钮
-  - [ ] 自动滚动到底部
+- [x] 6.6 创建 `src/components/LogViewer.svelte`
+  - [x] 日志列表显示
+  - [x] 时间戳、来源、流量、状态
+  - [x] 清空日志按钮
+  - [x] 自动滚动到底部
 
 ## Phase 7: 集成与测试
 

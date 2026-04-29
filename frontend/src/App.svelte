@@ -1,77 +1,79 @@
 <script lang="ts">
   import './app.css'
   import { onMount } from 'svelte'
-  import { Greet } from '../wailsjs/go/main/App'
+  import { api, type ForwardRule } from './lib/api'
+  import RuleForm from './components/RuleForm.svelte'
+  import RuleItem from './components/RuleItem.svelte'
+  import LogViewer from './components/LogViewer.svelte'
 
-  let resultText = ''
-  let greetName = ''
+  let rules: ForwardRule[] = []
+  let status: Record<string, boolean> = {}
+  let showForm = false
+  let logRuleId = ''
+  let loading = true
 
-  async function doGreet() {
-    resultText = await Greet(greetName)
+  async function refresh() {
+    try {
+      const [r, s] = await Promise.all([api.getRules(), api.getStatus()])
+      rules = r || []
+      status = s || {}
+    } catch (e) {
+      console.error('refresh failed:', e)
+    } finally {
+      loading = false
+    }
   }
 
-  onMount(() => {
-    resultText = 'Welcome to PortHannis!'
-  })
+  function handleFormSubmit() {
+    showForm = false
+    refresh()
+  }
+
+  function handleViewLogs(id: string) {
+    logRuleId = id
+  }
+
+  onMount(refresh)
 </script>
 
-<main>
-  <div id="result" class="result">{resultText}</div>
-  <div id="input" class="input-box">
-    <input id="name" type="text" autocomplete="off" bind:value={greetName} class="input" />
-    <button class="btn" on:click={doGreet}>Greet</button>
+<main class="h-full bg-gray-50 flex flex-col">
+  <header class="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
+    <h1 class="text-lg font-semibold text-gray-800">PortHannis</h1>
+    <button
+      on:click={() => (showForm = true)}
+      class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
+      + 添加规则
+    </button>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-6">
+    {#if loading}
+      <div class="text-center text-gray-400 py-12">加载中...</div>
+    {:else if rules.length === 0}
+      <div class="text-center text-gray-400 py-12">
+        <p class="text-lg mb-2">暂无转发规则</p>
+        <p class="text-sm">点击右上角 "添加规则" 开始使用</p>
+      </div>
+    {:else}
+      <div class="space-y-3 max-w-2xl mx-auto">
+        {#each rules as rule (rule.id)}
+          <RuleItem
+            {rule}
+            running={status[rule.id] || false}
+            on:refresh={refresh}
+            on:viewLogs={(e) => handleViewLogs(e.detail)}
+          />
+        {/each}
+      </div>
+    {/if}
   </div>
 </main>
 
-<style>
-  :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-    color: #213547;
-    background-color: #ffffff;
-  }
+{#if showForm}
+  <RuleForm on:submit={handleFormSubmit} on:cancel={() => (showForm = false)} />
+{/if}
 
-  main {
-    text-align: center;
-    padding: 2rem;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .result {
-    margin-bottom: 2rem;
-    font-size: 1.5rem;
-  }
-
-  .input-box {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  .input {
-    padding: 0.5rem 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    font-size: 1rem;
-    width: 200px;
-  }
-
-  .btn {
-    padding: 0.5rem 1.5rem;
-    background-color: #646cff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-
-  .btn:hover {
-    background-color: #535bf2;
-  }
-</style>
+{#if logRuleId}
+  <LogViewer ruleId={logRuleId} on:close={() => { logRuleId = ''; refresh(); }} />
+{/if}
