@@ -2,25 +2,25 @@
 
 ## Phase 1: 项目初始化
 
-- [ ] 1.1 创建 Go 模块
+- [x] 1.1 创建 Go 模块
   ```bash
   cd d:/Dev/PortHannis
-  go mod init github.com/yourusername/porthannis
+  go mod init github.com/HannisLee/PortHannis
   ```
 
-- [ ] 1.2 安装 Wails CLI
+- [x] 1.2 安装 Wails CLI
   ```bash
   go install github.com/wailsapp/wails/v2/cmd/wails@latest
   ```
 
-- [ ] 1.3 初始化 Wails + Svelte 项目
+- [x] 1.3 初始化 Wails + Svelte 项目
   ```bash
-  wails init -n porthannis -t svelte
+  wails init -n porthannis -t svelte-ts
   ```
 
-- [ ] 1.4 配置 wails.json（设置应用名称、图标路径等）
+- [x] 1.4 配置 wails.json（设置应用名称、图标路径等）
 
-- [ ] 1.5 创建项目目录结构
+- [x] 1.5 创建项目目录结构
   ```bash
   mkdir -p forwarder config tray
   ```
