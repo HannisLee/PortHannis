@@ -20,8 +20,16 @@ type Manager struct {
 
 func NewManager() *Manager {
 	return &Manager{
-		config: &Config{Rules: []ForwardRule{}},
+		config: &Config{Rules: []ForwardRule{}, WebUI: defaultWebUIConfig()},
 		dir:    GetConfigDir(),
+	}
+}
+
+func defaultWebUIConfig() WebUIConfig {
+	return WebUIConfig{
+		Enabled:  true,
+		Port:     18080,
+		Password: "",
 	}
 }
 
@@ -60,6 +68,9 @@ func (m *Manager) LoadConfig() error {
 	}
 	if cfg.Rules == nil {
 		cfg.Rules = []ForwardRule{}
+	}
+	if cfg.WebUI.Port == 0 {
+		cfg.WebUI = defaultWebUIConfig()
 	}
 	m.config = &cfg
 	return nil
@@ -117,6 +128,20 @@ func (m *Manager) UpdateRule(id string, enabled bool) error {
 			break
 		}
 	}
+	err := m.saveLocked()
+	m.mu.Unlock()
+	return err
+}
+
+func (m *Manager) GetWebUIConfig() WebUIConfig {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.config.WebUI
+}
+
+func (m *Manager) UpdateWebUIConfig(cfg WebUIConfig) error {
+	m.mu.Lock()
+	m.config.WebUI = cfg
 	err := m.saveLocked()
 	m.mu.Unlock()
 	return err

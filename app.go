@@ -7,6 +7,7 @@ import (
 
 	"github.com/HannisLee/PortHannis/config"
 	"github.com/HannisLee/PortHannis/forwarder"
+	"github.com/HannisLee/PortHannis/webui"
 	"github.com/google/uuid"
 )
 
@@ -15,6 +16,7 @@ type App struct {
 	quitting bool
 	mgr      *config.Manager
 	engine   *forwarder.Engine
+	webui    *webui.Server
 }
 
 func NewApp() *App {
@@ -38,9 +40,15 @@ func (a *App) startup(ctx context.Context) {
 			}
 		}
 	}
+
+	// 启动 WebUI
+	a.startWebUI()
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	if a.webui != nil {
+		a.webui.Stop(ctx)
+	}
 	a.engine.StopAll()
 }
 
@@ -107,4 +115,44 @@ func (a *App) ClearLogs(ruleID string) error {
 
 func (a *App) GetStatus() map[string]bool {
 	return a.engine.GetStatus()
+}
+
+// WebUI config bindings
+
+func (a *App) GetWebUIConfig() config.WebUIConfig {
+	return a.mgr.GetWebUIConfig()
+}
+
+func (a *App) UpdateWebUIConfig(enabled bool, port int, password string) error {
+	cfg := config.WebUIConfig{
+		Enabled:  enabled,
+		Port:     port,
+		Password: password,
+	}
+	return a.mgr.UpdateWebUIConfig(cfg)
+}
+
+// startWebUI 启动 WebUI 服务器
+func (a *App) startWebUI() {
+	webuiCfg := a.mgr.GetWebUIConfig()
+	if !webuiCfg.Enabled {
+		return
+	}
+
+	bindings := &webui.AppBindings{
+		GetRules:   a.GetRules,
+		AddRule:    a.AddRule,
+		DeleteRule: a.DeleteRule,
+		ToggleRule: a.ToggleRule,
+		GetLogs:    a.GetLogs,
+		ClearLogs:  a.ClearLogs,
+		GetStatus:  a.GetStatus,
+		GetWebUI:   a.GetWebUIConfig,
+		SetWebUI: func(cfg config.WebUIConfig) error {
+			return a.mgr.UpdateWebUIConfig(cfg)
+		},
+	}
+
+	a.webui = webui.NewServer(bindings, webuiCfg.Port)
+	a.webui.Start()
 }

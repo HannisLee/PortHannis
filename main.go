@@ -5,6 +5,7 @@ import (
 	"embed"
 
 	"github.com/HannisLee/PortHannis/tray"
+	"github.com/HannisLee/PortHannis/webui"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -16,6 +17,7 @@ var assets embed.FS
 
 func main() {
 	app := NewApp()
+	webui.SetFrontendAssets(assets)
 
 	go tray.Run(tray.Callbacks{
 		OnShow: func() {

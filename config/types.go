@@ -21,7 +21,15 @@ type LogEntry struct {
 	Status    string    `json:"status"`
 }
 
+// WebUIConfig WebUI 服务配置
+type WebUIConfig struct {
+	Enabled  bool   `json:"enabled"`  // 是否启用 WebUI，默认 true
+	Port     int    `json:"port"`     // 监听端口，默认 18080
+	Password string `json:"password"` // 访问密码，空则无需认证
+}
+
 // Config 应用配置
 type Config struct {
-	Rules []ForwardRule `json:"rules"`
+	Rules  []ForwardRule `json:"rules"`
+	WebUI  WebUIConfig   `json:"webui"`
 }
