@@ -6,7 +6,7 @@
 porthannis
 
 # Build output
-/build/
+/build/bin/
 /frontend/dist/
 
 # Node modules
@@ -14,7 +14,6 @@ frontend/node_modules/
 package-lock.json
 
 # Go
-*.sum
 
 # IDE
 .idea/
