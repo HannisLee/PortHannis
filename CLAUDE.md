@@ -174,44 +174,11 @@ wails build
    - 边界测试：测试边界条件和错误处理
    - 跨平台验证（如适用）
 4. **提交代码**：撰写规范的 commit 信息并提交
+5. **完成阶段**：修改 `tasks.md` ，标记为已完成
 
 ### Commit 信息规范
 
 遵循 Conventional Commits 格式：
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-**类型 (type):**
-- `feat`: 新功能
-- `fix`: Bug 修复
-- `chore`: 构建/工具链配置
-- `docs`: 文档更新
-- `refactor`: 代码重构
-- `test`: 测试相关
-
-**示例:**
-```
-feat(forwarder): implement TCP port forwarding engine
-
-- Add tcp listener with configurable local port
-- Implement connection forwarding to target host:port
-- Add connection logging with byte tracking
-- Handle concurrent connections with goroutines
-
-Tested:
-- Single connection forwarding works correctly
-- Multiple concurrent connections handled properly
-- Connection errors logged appropriately
-- Port binding conflicts detected and reported
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-```
 
 ### 环境配置
 
