@@ -19,7 +19,7 @@ impl ConfigStore {
     /// 从指定路径加载配置。若文件不存在则创建默认空配置。
     pub fn load(path: PathBuf) -> Result<Self> {
         let data = if path.exists() {
-            let content = fs::read_to_string(&path).map_err(|e| Error::Io(e))?;
+            let content = fs::read_to_string(&path).map_err(Error::Io)?;
             if content.trim().is_empty() {
                 ConfigFile {
                     entries: Vec::new(),
@@ -34,9 +34,9 @@ impl ConfigStore {
             let parent = path
                 .parent()
                 .ok_or_else(|| Error::Validation("config path has no parent".into()))?;
-            fs::create_dir_all(parent).map_err(|e| Error::Io(e))?;
+            fs::create_dir_all(parent).map_err(Error::Io)?;
             let content = serde_json::to_string_pretty(&cfg).map_err(Error::Json)?;
-            fs::write(&path, &content).map_err(|e| Error::Io(e))?;
+            fs::write(&path, &content).map_err(Error::Io)?;
             cfg
         };
 
@@ -47,8 +47,8 @@ impl ConfigStore {
     pub fn save(&self) -> Result<()> {
         let tmp_path = self.path.with_extension("tmp");
         let content = serde_json::to_string_pretty(&self.data).map_err(Error::Json)?;
-        fs::write(&tmp_path, &content).map_err(|e| Error::Io(e))?;
-        fs::rename(&tmp_path, &self.path).map_err(|e| Error::Io(e))?;
+        fs::write(&tmp_path, &content).map_err(Error::Io)?;
+        fs::rename(&tmp_path, &self.path).map_err(Error::Io)?;
         Ok(())
     }
 

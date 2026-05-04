@@ -39,7 +39,7 @@ impl EntryLogger {
             .create(true)
             .append(true)
             .open(&log_path)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         let current_size = file.metadata().map(|m| m.len()).unwrap_or(0);
 
@@ -84,8 +84,8 @@ impl EntryLogger {
         let writer = self.writer.as_mut().unwrap();
         writer
             .write_all(line.as_bytes())
-            .map_err(|e| Error::Io(e))?;
-        writer.flush().map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
+        writer.flush().map_err(Error::Io)?;
         self.current_size += line_bytes;
         Ok(())
     }
@@ -133,7 +133,7 @@ impl EntryLogger {
             .create(true)
             .append(true)
             .open(&current_path)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         self.writer = Some(BufWriter::new(file));
         self.current_size = 0;
@@ -169,7 +169,7 @@ impl EntryLogger {
             }
             if let Ok(file) = File::open(path) {
                 let reader = BufReader::new(file);
-                for line in reader.lines().flatten() {
+                for line in reader.lines().map_while(|r| r.ok()) {
                     if let Some(log_line) = parse_log_line(&line) {
                         all_lines.push(log_line);
                     }
@@ -224,19 +224,13 @@ pub async fn spawn_logger_task(
             }
         };
 
-        loop {
-            match rx.blocking_recv() {
-                Some(msg) => {
-                    if let Err(e) = logger.write_message(&msg) {
-                        tracing::error!("写入日志失败: {}", e);
-                    }
-                }
-                None => break,
+        while let Some(msg) = rx.blocking_recv() {
+            if let Err(e) = logger.write_message(&msg) {
+                tracing::error!("写入日志失败: {}", e);
             }
 
             // 非阻塞检查关闭信号
             if *shutdown.borrow() {
-                // 处理完通道中残余消息
                 while let Ok(msg) = rx.try_recv() {
                     let _ = logger.write_message(&msg);
                 }
@@ -248,9 +242,8 @@ pub async fn spawn_logger_task(
     Ok(handle)
 }
 
-/// 根据文件名判断分段序号，用于按时间排序。
-/// current.log = 0（最新），current.log.1 = 1，...，current.log.N = N
-fn segment_order(path: &PathBuf) -> u32 {
+/// 根据文件名判断分段序号：值越小表示文件越旧。按升序排序后，旧文件在前。
+fn segment_order(path: &std::path::Path) -> u32 {
     let name = path.file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("");
@@ -369,8 +362,8 @@ mod tests {
         let older1 = PathBuf::from("current.log.1");
         let older2 = PathBuf::from("current.log.2");
 
-        let mut paths = vec![newest, older1.clone(), older2.clone()];
-        paths.sort_by(|a, b| segment_order(a).cmp(&segment_order(b)));
+        let mut paths = [newest, older1.clone(), older2.clone()];
+        paths.sort_by_key(|a| segment_order(a));
 
         // 最旧的是 current.log.2
         assert_eq!(paths[0].file_name().unwrap(), "current.log.2");
