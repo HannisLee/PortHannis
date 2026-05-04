@@ -48,7 +48,9 @@ jobs:
           Compress-Archive -Path "$dist/*" -DestinationPath porthannis-windows-headless.zip
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2"
+        run: |
+          cargo install cargo-binstall -y
+          cargo binstall cargo-tauri -y --force
 
       - name: Build Tauri GUI
         run: cd gui && cargo tauri build
@@ -116,7 +118,9 @@ jobs:
           tar czf ../porthannis-linux-headless.tar.gz porthannis config.json
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2"
+        run: |
+          cargo install cargo-binstall -y
+          cargo binstall cargo-tauri -y --force
 
       - name: Build Tauri GUI
         run: cd gui && cargo tauri build
