@@ -1,10 +1,6 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegram/nicegram-tauri/main/capabilities-schema.json",
   "identifier": "default",
   "description": "Default capability for PortHannis",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "shell:allow-open"
-  ]
+  "permissions": ["core:default"]
 }

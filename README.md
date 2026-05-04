@@ -1,56 +1,36 @@
 # PortHannis — 端口转发管理器
 
-轻量级跨平台端口转发管理工具，支持 GUI（Windows/Linux）和 Headless WebUI 两种部署模式。
+轻量级端口转发管理工具，Rust 核心 + Web UI。
 
 ## 特性
 
 - **TCP 端口转发** — 高性能异步 TCP 代理，支持双向数据转发
-- **JSON 配置管理** — 单文件配置，人工可编辑，原子写入
-- **日志轮转** — 每条目独立日志，5MB 上限，自动循环删除最旧记录
+- **JSON 配置管理** — 单文件配置（port.json），人工可编辑
+- **日志轮转** — 每条目独立日志，1MB × 5 文件轮转
 - **REST API** — 完整的 CRUD + 启停控制 API
-- **GUI 桌面应用** — 基于 Tauri v2，Windows/Linux 原生体验
-- **WebUI** — Headless 模式下通过浏览器管理，适合服务器部署
-- **单文件部署** — Windows 仅需一个 exe + 一个 json 配置文件
-- **体积小巧** — 二进制文件 < 5 MB（含嵌入式前端）
+- **WebUI** — 通过浏览器管理，支持 7777 端口访问
+- **单文件核心** — server/core.rs 包含所有核心逻辑
 
 ## 快速开始
 
-### Windows
-
-1. 下载 `porthannis-windows.zip`
-2. 解压到任意目录
-3. 双击运行 `porthannis.exe` 或命令行启动：
-   ```powershell
-   .\porthannis.exe -b 0.0.0.0 -P 25879
-   ```
-4. 浏览器打开 `http://localhost:25879`
-
-### Linux Headless
+### 运行服务器
 
 ```bash
-tar xzf porthannis-linux-headless.tar.gz
-./porthannis -b 0.0.0.0 -P 25879
-# 浏览器打开 http://<server-ip>:25879
+# 直接运行
+run.bat
+
+# 或使用 cargo
+cargo run -p porthannis-server
 ```
 
-### Linux GUI
+服务器将在 `http://127.0.0.1:7777` 启动，浏览器会自动打开。
+
+### 构建发布版本
 
 ```bash
-# .deb 安装
-sudo dpkg -i porthannis-gui_*.deb
-
-# 或 .AppImage
-chmod +x porthannis-gui_*.AppImage
-./porthannis-gui_*.AppImage
+cargo build --release -p porthannis-server
+# 可执行文件: target/release/porthannis.exe
 ```
-
-## 命令行参数
-
-| 参数 | 环境变量 | 默认值 | 说明 |
-|------|----------|--------|------|
-| `-c, --config` | `PORTHANNIS_CONFIG` | 平台数据目录 | JSON 配置文件路径 |
-| `-b, --bind` | `PORTHANNIS_BIND` | `127.0.0.1` | API 绑定地址 |
-| `-P, --port` | `PORTHANNIS_PORT` | `25879` | API 绑定端口 |
 
 ## API 文档
 
@@ -70,7 +50,7 @@ chmod +x porthannis-gui_*.AppImage
 ### 创建条目示例
 
 ```bash
-curl -X POST http://localhost:25879/api/entries \
+curl -X POST http://127.0.0.1:7777/api/entries \
   -H "Content-Type: application/json" \
   -d '{
     "name": "MySQL 转发",
@@ -84,6 +64,8 @@ curl -X POST http://localhost:25879/api/entries \
 
 ## 配置文件格式
 
+`port.json` 位于项目根目录：
+
 ```json
 {
   "entries": [
@@ -94,7 +76,7 @@ curl -X POST http://localhost:25879/api/entries \
       "source_port": 3306,
       "target_address": "192.168.1.100",
       "target_port": 3306,
-      "log_directory": "/home/user/.config/porthannis/logs/mysql_forward",
+      "log_directory": "logs/mysql_forward",
       "enabled": true,
       "created_at": "2026-01-01T00:00:00Z",
       "updated_at": "2026-01-01T00:00:00Z"
@@ -103,59 +85,36 @@ curl -X POST http://localhost:25879/api/entries \
 }
 ```
 
+## 技术栈
+
+- **Rust** — 核心后端 + Axum HTTP 框架 + Tokio 异步
+- **React + TypeScript** — Web 前端（开发中）
+- **JSON** — 配置持久化（无数据库依赖）
+
+## 项目结构
+
+```
+port-hannis/
+├── port.json          # 配置文件
+├── server/
+│   ├── core.rs        # TCP 转发核心（~800 行）
+│   └── src/main.rs    # HTTP API 服务器
+├── frontend/          # Web UI（开发中）
+└── logs/              # 日志目录
+```
+
 ## 从源码构建
 
 ### 前置条件
 
 - Rust 1.85+
-- Node.js 22+
-- (仅 GUI) Tauri 系统依赖: `libwebkit2gtk-4.1-dev` 等
+- Node.js 22+（构建前端）
 
-### Headless 服务器
+### 构建服务器
 
 ```bash
-cd frontend && npm ci && npm run build
-cd ..
 cargo build --release -p porthannis-server
-# 二进制位于: target/release/porthannis
-```
-
-### Tauri GUI
-
-```bash
-cd frontend && npm ci && npm run build
-cd ../gui
-cargo tauri build
-```
-
-## 技术栈
-
-- **Rust** — 核心后端 + Axum HTTP 框架 + Tokio 异步
-- **Tauri v2** — 跨平台桌面应用
-- **React + TypeScript + Vite** — Web 前端
-- **JSON** — 配置持久化（无数据库依赖）
-
-## 架构概览
-
-```
-┌─────────────────────────────────────┐
-│           前端 (React)              │
-│   (GUI 内嵌 / Headless 浏览器)       │
-└─────────────┬───────────────────────┘
-              │ REST API (HTTP)
-┌─────────────▼───────────────────────┐
-│       Axum API Server (Rust)       │
-│  ├─ CRUD 条目管理                    │
-│  ├─ 启动/停止 转发                   │
-│  └─ 日志查询                         │
-└─────────────┬───────────────────────┘
-              │
-┌─────────────▼───────────────────────┐
-│      ForwardingManager (Rust)       │
-│  ├─ ConfigStore (JSON 读写)          │
-│  ├─ TcpProxy × N (端口转发)          │
-│  └─ EntryLogger × N (日志轮转)       │
-└─────────────────────────────────────┘
+# 二进制位于: target/release/porthannis.exe
 ```
 
 ## License

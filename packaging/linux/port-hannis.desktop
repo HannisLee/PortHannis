@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=PortHannis
-Comment=端口转发管理器
-Exec=porthannis-gui
-Icon=porthannis-gui
-Type=Application
-Categories=Network;System;
-Terminal=false

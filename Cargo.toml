@@ -1,11 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["core", "server", "gui"]
+members = ["server", "gui"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-rust-version = "1.85"
 license = "MIT"
 
 [workspace.dependencies]
@@ -22,9 +21,6 @@ tower-http = { version = "0.6", features = ["cors", "fs", "trace"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# embedding
-rust-embed = "8"
-
 # logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
@@ -33,14 +29,15 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
-directories = "6"
 
 # cli
 clap = { version = "4", features = ["derive", "env"] }
 
-# tauri (only in gui/)
+# misc
+anyhow = "1"
+opener = "0.7"
+rust-embed = "8"
+
+# tauri
 tauri = { version = "2", features = [] }
 tauri-build = { version = "2", features = [] }
-
-# dev
-tempfile = "3"

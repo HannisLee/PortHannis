@@ -1,38 +1,20 @@
-use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use axum::{body::Body, http::{Response, Uri}, routing::get};
-use clap::Parser;
-use rust_embed::RustEmbed;
-use tokio::signal;
-use tower_http::trace::TraceLayer;
+use axum::{
+    body::Body,
+    http::{Response, Uri},
+    routing::{get, post},
+    Router,
+};
+use tower_http::cors::CorsLayer;
 use tracing::info;
 
-use porthannis_core::api::{self, AppState};
-use porthannis_core::manager::ForwardingManager;
+#[path = "../core.rs"]
+mod core;
 
-/// PortHannis — 轻量级端口转发管理器
-#[derive(Parser, Debug)]
-#[command(name = "porthannis", version, about)]
-struct Cli {
-    /// JSON 配置文件路径
-    #[arg(short, long, env = "PORTHANNIS_CONFIG")]
-    config: Option<PathBuf>,
+use core::{AppState, ProxyManager};
 
-    /// API 绑定地址
-    #[arg(short, long, default_value = "127.0.0.1", env = "PORTHANNIS_BIND")]
-    bind: String,
-
-    /// API 绑定端口
-    #[arg(short = 'P', long, default_value = "25879", env = "PORTHANNIS_PORT")]
-    port: u16,
-}
-
-/// 嵌入前端构建产物（frontend/dist/）
-#[derive(RustEmbed)]
-#[folder = "../frontend/dist/"]
-struct FrontendAssets;
+const INDEX_HTML: &str = include_str!("../web.html");
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -43,64 +25,53 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let cli = Cli::parse();
-
-    let config_path = cli.config.unwrap_or_else(|| {
-        let data_dir = directories::ProjectDirs::from("com", "porthannis", "PortHannis")
-            .map(|d| d.config_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from("."));
-        std::fs::create_dir_all(&data_dir).ok();
-        data_dir.join("config.json")
-    });
-
-    info!("配置路径: {}", config_path.display());
-
-    let manager = Arc::new(ForwardingManager::new(config_path).await?);
+    let manager = ProxyManager::new().await?;
     manager.auto_start_enabled().await;
 
     let app_state = AppState {
-        manager: manager.clone(),
+        manager: Arc::new(manager),
     };
 
-    let app = api::build_router(app_state)
-        .route("/{*path}", get(serve_frontend))
-        .layer(TraceLayer::new_for_http());
+    let app = Router::new()
+        .route("/api/health", get(health_check))
+        .route("/api/entries", get(core::list_entries).post(core::create_entry))
+        .route(
+            "/api/entries/{id}",
+            get(core::get_entry)
+                .put(core::update_entry)
+                .delete(core::delete_entry),
+        )
+        .route("/api/entries/{id}/start", post(core::start_entry))
+        .route("/api/entries/{id}/stop", post(core::stop_entry))
+        .route("/api/entries/{id}/status", get(core::get_entry_status))
+        .route("/api/entries/{id}/logs", get(core::get_entry_logs))
+        .fallback(serve_frontend)
+        .layer(CorsLayer::permissive())
+        .with_state(app_state);
 
-    let addr: SocketAddr = format!("{}:{}", cli.bind, cli.port).parse()?;
-    info!("PortHannis 已启动: http://{}", addr);
-
+    let addr = "127.0.0.1:7777";
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app)
-        .with_graceful_shutdown(async move {
-            signal::ctrl_c().await.ok();
-            info!("收到终止信号，正在关闭所有转发...");
-            manager.shutdown_all().await;
-        })
-        .await?;
+    info!("PortHannis 启动: http://{}", addr);
 
+    let browser_url = format!("http://{}", addr);
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        if let Err(e) = opener::open(&browser_url) {
+            tracing::debug!("自动打开浏览器失败: {}", e);
+        }
+    });
+
+    axum::serve(listener, app).await?;
     Ok(())
 }
 
-/// 服务嵌入式前端静态文件，支持 SPA fallback。
-async fn serve_frontend(uri: Uri) -> Response<Body> {
-    let path = uri.path().trim_start_matches('/');
-    let path = if path.is_empty() { "index.html" } else { path };
+async fn health_check() -> &'static str {
+    "OK"
+}
 
-    match FrontendAssets::get(path) {
-        Some(content) => {
-            let mime = mime_guess::from_path(path).first_or_octet_stream();
-            Response::builder()
-                .header("Content-Type", mime.as_ref())
-                .body(Body::from(content.data))
-                .unwrap()
-        }
-        None => {
-            // SPA fallback: 返回 index.html
-            let content = FrontendAssets::get("index.html").unwrap();
-            Response::builder()
-                .header("Content-Type", "text/html")
-                .body(Body::from(content.data))
-                .unwrap()
-        }
-    }
+async fn serve_frontend(_uri: Uri) -> Response<Body> {
+    Response::builder()
+        .header("Content-Type", "text/html; charset=utf-8")
+        .body(Body::from(INDEX_HTML))
+        .unwrap()
 }

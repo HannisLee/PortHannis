@@ -1,13 +1,10 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegram/nicegram-tauri/main/tauri-conf.json",
   "productName": "PortHannis",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.porthannis.gui",
   "build": {
-    "frontendDist": "../frontend/dist",
-    "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "frontendDist": "dist",
+    "devUrl": "http://localhost:25879"
   },
   "app": {
     "windows": [

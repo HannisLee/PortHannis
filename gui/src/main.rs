@@ -2,24 +2,26 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use clap::Parser;
-use tokio::net::TcpListener;
+use axum::{
+    body::Body,
+    http::{Response, Uri},
+    routing::{get, post},
+    Router,
+};
 use tokio::sync::oneshot;
+use tower_http::cors::CorsLayer;
 use tracing::info;
 
-use porthannis_core::api::{self, AppState};
-use porthannis_core::manager::ForwardingManager;
+#[path = "../../server/core.rs"]
+mod core;
+
+use core::{AppState, ProxyManager};
+
 use porthannis_gui_lib::run_tauri;
 
-#[derive(Parser, Debug)]
-#[command(name = "porthannis-gui", version, about)]
-struct Cli {
-    #[arg(short, long, env = "PORTHANNIS_CONFIG")]
-    config: Option<PathBuf>,
-}
+const INDEX_HTML: &str = include_str!("../../server/web.html");
 
 fn main() {
     tracing_subscriber::fmt()
@@ -29,54 +31,70 @@ fn main() {
         )
         .init();
 
-    let cli = Cli::parse();
-
-    let config_path = cli.config.unwrap_or_else(|| {
-        let data_dir = directories::ProjectDirs::from("com", "porthannis", "PortHannis")
-            .map(|d| d.config_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from("."));
-        std::fs::create_dir_all(&data_dir).ok();
-        data_dir.join("config.json")
-    });
-
     let api_port = find_available_port(25879).unwrap_or(25880);
     let (ready_tx, ready_rx) = oneshot::channel();
 
-    // 后台线程：启动 Axum 服务器
-    let config_path_clone = config_path.clone();
+    // Background thread: start Axum server
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().expect("创建 tokio runtime 失败");
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
         rt.block_on(async move {
-            let manager = ForwardingManager::new(config_path_clone)
-                .await
-                .expect("创建管理器失败");
+            let manager = ProxyManager::new().await.expect("Failed to create ProxyManager");
             manager.auto_start_enabled().await;
 
             let app_state = AppState {
                 manager: Arc::new(manager),
             };
 
-            let app = api::build_router(app_state);
+            let app = build_router(app_state);
             let addr: SocketAddr = format!("127.0.0.1:{}", api_port)
                 .parse()
-                .expect("无效的 API 地址");
+                .expect("Invalid API address");
 
-            let listener = TcpListener::bind(addr).await.expect("绑定 API 端口失败");
+            let listener = tokio::net::TcpListener::bind(addr)
+                .await
+                .expect("Failed to bind API port");
             info!("后端 API 已启动: http://{}", addr);
 
-            // 通知主线程服务器已就绪
             let _ = ready_tx.send(());
-
             axum::serve(listener, app).await.ok();
         });
     });
 
-    // 等待后台服务就绪（最多等 10 秒）
+    // Wait for backend to be ready
     let _ = ready_rx.blocking_recv();
-    std::thread::sleep(std::time::Duration::from_millis(200));
 
-    // 启动 Tauri GUI
+    // Launch Tauri GUI
     run_tauri(api_port);
+}
+
+fn build_router(state: AppState) -> Router {
+    Router::new()
+        .route("/api/health", get(health_check))
+        .route("/api/entries", get(core::list_entries).post(core::create_entry))
+        .route(
+            "/api/entries/{id}",
+            get(core::get_entry)
+                .put(core::update_entry)
+                .delete(core::delete_entry),
+        )
+        .route("/api/entries/{id}/start", post(core::start_entry))
+        .route("/api/entries/{id}/stop", post(core::stop_entry))
+        .route("/api/entries/{id}/status", get(core::get_entry_status))
+        .route("/api/entries/{id}/logs", get(core::get_entry_logs))
+        .fallback(serve_frontend)
+        .layer(CorsLayer::permissive())
+        .with_state(state)
+}
+
+async fn health_check() -> &'static str {
+    "OK"
+}
+
+async fn serve_frontend(_uri: Uri) -> Response<Body> {
+    Response::builder()
+        .header("Content-Type", "text/html; charset=utf-8")
+        .body(Body::from(INDEX_HTML))
+        .unwrap()
 }
 
 fn find_available_port(start: u16) -> Option<u16> {
