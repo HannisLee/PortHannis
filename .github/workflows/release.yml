@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-headless:
+    name: Build Headless (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: porthannis-linux-headless.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: porthannis-windows.zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Build server binary
+        run: cargo build --release -p porthannis-server
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dist = "dist"
+          New-Item -ItemType Directory -Force -Path $dist
+          Copy-Item target/release/porthannis.exe $dist/
+          Copy-Item packaging/default-config.json $dist/config.json
+          Compress-Archive -Path "$dist/*" -DestinationPath porthannis-windows.zip
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          cp target/release/porthannis dist/
+          cp packaging/default-config.json dist/config.json
+          cd dist
+          tar czf ../porthannis-linux-headless.tar.gz porthannis config.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  create-release:
+    name: Create Release
+    needs: build-headless
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Generate release notes
+        run: |
+          echo "## PortHannis ${{ github.ref_name }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "### 产物" >> release-notes.md
+          echo "- porthannis-windows.zip — Windows 单文件 + 配置" >> release-notes.md
+          echo "- porthannis-linux-headless.tar.gz — Linux Headless 服务器" >> release-notes.md
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            porthannis-windows.zip
+            porthannis-linux-headless.tar.gz
