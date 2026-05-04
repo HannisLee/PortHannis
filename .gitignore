@@ -19,3 +19,9 @@ Thumbs.db
 # Env
 .env
 .env.local
+*.exe
+*.msi
+*.zip
+*.tar.gz
+*.AppImage
+*.deb
