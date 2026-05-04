@@ -3,9 +3,11 @@
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use clap::Parser;
 use tokio::net::TcpListener;
+use tokio::sync::oneshot;
 use tracing::info;
 
 use porthannis_core::api::{self, AppState};
@@ -15,7 +17,6 @@ use porthannis_gui_lib::run_tauri;
 #[derive(Parser, Debug)]
 #[command(name = "porthannis-gui", version, about)]
 struct Cli {
-    /// JSON 配置文件路径
     #[arg(short, long, env = "PORTHANNIS_CONFIG")]
     config: Option<PathBuf>,
 }
@@ -38,15 +39,13 @@ fn main() {
         data_dir.join("config.json")
     });
 
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let _guard = rt.enter();
-
-    // 查找可用端口（从 25879 开始，如果被占用则递增）
     let api_port = find_available_port(25879).unwrap_or(25880);
+    let (ready_tx, ready_rx) = oneshot::channel();
 
-    // 在后台线程启动 Axum 服务器
+    // 后台线程：启动 Axum 服务器
     let config_path_clone = config_path.clone();
     std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().expect("创建 tokio runtime 失败");
         rt.block_on(async move {
             let manager = ForwardingManager::new(config_path_clone)
                 .await
@@ -54,23 +53,29 @@ fn main() {
             manager.auto_start_enabled().await;
 
             let app_state = AppState {
-                manager: std::sync::Arc::new(manager),
+                manager: Arc::new(manager),
             };
 
             let app = api::build_router(app_state);
-
             let addr: SocketAddr = format!("127.0.0.1:{}", api_port)
                 .parse()
                 .expect("无效的 API 地址");
 
+            let listener = TcpListener::bind(addr).await.expect("绑定 API 端口失败");
             info!("后端 API 已启动: http://{}", addr);
 
-            let listener = TcpListener::bind(addr).await.expect("绑定 API 端口失败");
+            // 通知主线程服务器已就绪
+            let _ = ready_tx.send(());
+
             axum::serve(listener, app).await.ok();
         });
     });
 
-    // 启动 Tauri
+    // 等待后台服务就绪（最多等 10 秒）
+    let _ = ready_rx.blocking_recv();
+    std::thread::sleep(std::time::Duration::from_millis(200));
+
+    // 启动 Tauri GUI
     run_tauri(api_port);
 }
 
