@@ -77,7 +77,9 @@ pub enum EntryStatus {
     Running,
     Stopped,
     #[serde(rename = "error")]
-    Error { message: String },
+    Error {
+        message: String,
+    },
 }
 
 /// 日志级别
@@ -95,7 +97,11 @@ pub enum LogEvent {
     #[serde(rename = "connection_accepted")]
     ConnectionAccepted { source: String },
     #[serde(rename = "connection_closed")]
-    ConnectionClosed { bytes_in: u64, bytes_out: u64, duration_ms: u64 },
+    ConnectionClosed {
+        bytes_in: u64,
+        bytes_out: u64,
+        duration_ms: u64,
+    },
     #[serde(rename = "connection_error")]
     ConnectionError { error: String },
     #[serde(rename = "forwarder_started")]
@@ -237,9 +243,14 @@ impl TcpProxy {
         let conn_id = Uuid::new_v4().to_string();
         let start_time = std::time::Instant::now();
 
-        log_send(&log_tx, LogLevel::Info, &conn_id, LogEvent::ConnectionAccepted {
-            source: addr.to_string(),
-        });
+        log_send(
+            &log_tx,
+            LogLevel::Info,
+            &conn_id,
+            LogEvent::ConnectionAccepted {
+                source: addr.to_string(),
+            },
+        );
 
         match TcpStream::connect(&target_addr).await {
             Ok(mut target) => {
@@ -291,26 +302,31 @@ impl TcpProxy {
                 drop(client_write);
                 drop(target_write);
 
-                log_send(&log_tx, LogLevel::Info, &conn_id, LogEvent::ConnectionClosed {
-                    bytes_in,
-                    bytes_out,
-                    duration_ms,
-                });
+                log_send(
+                    &log_tx,
+                    LogLevel::Info,
+                    &conn_id,
+                    LogEvent::ConnectionClosed {
+                        bytes_in,
+                        bytes_out,
+                        duration_ms,
+                    },
+                );
 
                 info!(
                     "连接关闭: {} ({}: {} -> {}), bytes: {}/{}",
-                    entry_id,
-                    conn_id,
-                    client_addr,
-                    target_addr2,
-                    bytes_in,
-                    bytes_out
+                    entry_id, conn_id, client_addr, target_addr2, bytes_in, bytes_out
                 );
             }
             Err(e) => {
-                log_send(&log_tx, LogLevel::Error, &conn_id, LogEvent::ConnectionError {
-                    error: e.to_string(),
-                });
+                log_send(
+                    &log_tx,
+                    LogLevel::Error,
+                    &conn_id,
+                    LogEvent::ConnectionError {
+                        error: e.to_string(),
+                    },
+                );
             }
         }
 
@@ -318,7 +334,12 @@ impl TcpProxy {
     }
 }
 
-fn log_send(log_tx: &mpsc::UnboundedSender<LogMessage>, level: LogLevel, conn_id: &str, event: LogEvent) {
+fn log_send(
+    log_tx: &mpsc::UnboundedSender<LogMessage>,
+    level: LogLevel,
+    conn_id: &str,
+    event: LogEvent,
+) {
     let _ = log_tx.send(LogMessage {
         timestamp: Utc::now(),
         level,
@@ -342,7 +363,9 @@ impl ConfigStore {
             let content = fs::read_to_string(&path)?;
             serde_json::from_str(&content)?
         } else {
-            ConfigFile { entries: Vec::new() }
+            ConfigFile {
+                entries: Vec::new(),
+            }
         };
         Ok(Self { path, data })
     }
@@ -389,10 +412,16 @@ impl ConfigStore {
         Ok(entry)
     }
 
-    pub fn update_entry(&mut self, id: &str, req: EntryRequest) -> Result<ForwardingEntry, CoreError> {
+    pub fn update_entry(
+        &mut self,
+        id: &str,
+        req: EntryRequest,
+    ) -> Result<ForwardingEntry, CoreError> {
         validate_entry_request(&req)?;
 
-        let entry = self.find_entry(id).ok_or_else(|| CoreError::NotFound(id.to_string()))?;
+        let entry = self
+            .find_entry(id)
+            .ok_or_else(|| CoreError::NotFound(id.to_string()))?;
 
         let index = self.data.entries.iter().position(|e| e.id == id).unwrap();
         let mut updated = entry.clone();
@@ -410,7 +439,9 @@ impl ConfigStore {
     }
 
     pub fn remove_entry(&mut self, id: &str) -> Result<ForwardingEntry, CoreError> {
-        let _entry = self.find_entry(id).ok_or_else(|| CoreError::NotFound(id.to_string()))?;
+        let _entry = self
+            .find_entry(id)
+            .ok_or_else(|| CoreError::NotFound(id.to_string()))?;
         let index = self.data.entries.iter().position(|e| e.id == id).unwrap();
         Ok(self.data.entries.remove(index))
     }
@@ -465,10 +496,12 @@ impl EntryLogger {
             0
         };
 
-        let writer = Some(BufWriter::new(OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&current_path)?));
+        let writer = Some(BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&current_path)?,
+        ));
 
         Ok(Self {
             entry_id,
@@ -524,10 +557,12 @@ impl EntryLogger {
 
         // 创建新文件
         let new_current = self.dir.join("current.log");
-        let writer = Some(BufWriter::new(OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&new_current)?));
+        let writer = Some(BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&new_current)?,
+        ));
         self.writer = writer;
         self.current_size = 0;
 
@@ -595,9 +630,16 @@ fn parse_log_line(line: &str) -> Result<LogLine, CoreError> {
     let parts: Vec<&str> = line.splitn(3, ' ').collect();
     if parts.len() >= 3 {
         let timestamp = parts[0].to_string();
-        let level = parts[1].trim_start_matches('[').trim_end_matches(']').to_string();
+        let level = parts[1]
+            .trim_start_matches('[')
+            .trim_end_matches(']')
+            .to_string();
         let message = parts[2].to_string();
-        Ok(LogLine { timestamp, level, message })
+        Ok(LogLine {
+            timestamp,
+            level,
+            message,
+        })
     } else {
         Ok(LogLine {
             timestamp: String::new(),
@@ -650,7 +692,11 @@ impl ProxyManager {
         self.config.write().await.add_entry(req)
     }
 
-    pub async fn update_entry(&self, id: &str, req: EntryRequest) -> Result<ForwardingEntry, CoreError> {
+    pub async fn update_entry(
+        &self,
+        id: &str,
+        req: EntryRequest,
+    ) -> Result<ForwardingEntry, CoreError> {
         self.config.write().await.update_entry(id, req)
     }
 
@@ -668,7 +714,11 @@ impl ProxyManager {
             }
         }
 
-        let entry = self.config.read().await.find_entry(id)
+        let entry = self
+            .config
+            .read()
+            .await
+            .find_entry(id)
             .ok_or_else(|| CoreError::NotFound(id.to_string()))?
             .clone();
 
@@ -708,15 +758,21 @@ impl ProxyManager {
         });
 
         // 存储句柄
-        self.proxies.write().await.insert(id.to_string(), ProxyHandle {
-            cancel,
-            join_handle,
-        });
+        self.proxies.write().await.insert(
+            id.to_string(),
+            ProxyHandle {
+                cancel,
+                join_handle,
+            },
+        );
 
-        self.loggers.write().await.insert(id.to_string(), LoggerHandle {
-            shutdown_tx,
-            join_handle: log_handle,
-        });
+        self.loggers.write().await.insert(
+            id.to_string(),
+            LoggerHandle {
+                shutdown_tx,
+                join_handle: log_handle,
+            },
+        );
 
         Ok(EntryStatus::Running)
     }
@@ -730,10 +786,8 @@ impl ProxyManager {
 
         if let Some(handle) = proxy_handle {
             handle.cancel.cancel();
-            let _ = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                handle.join_handle,
-            ).await;
+            let _ =
+                tokio::time::timeout(std::time::Duration::from_secs(5), handle.join_handle).await;
         } else {
             return Ok(EntryStatus::Stopped);
         }
@@ -741,17 +795,19 @@ impl ProxyManager {
         // 关闭日志任务
         if let Some(logger_handle) = self.loggers.write().await.remove(id) {
             let _ = logger_handle.shutdown_tx.send(true);
-            let _ = tokio::time::timeout(
-                std::time::Duration::from_secs(3),
-                logger_handle.join_handle,
-            ).await;
+            let _ =
+                tokio::time::timeout(std::time::Duration::from_secs(3), logger_handle.join_handle)
+                    .await;
         }
 
         Ok(EntryStatus::Stopped)
     }
 
     pub async fn get_status(&self, id: &str) -> Result<EntryStatus, CoreError> {
-        self.config.read().await.find_entry(id)
+        self.config
+            .read()
+            .await
+            .find_entry(id)
             .ok_or_else(|| CoreError::NotFound(id.to_string()))?;
 
         let proxies = self.proxies.read().await;
@@ -762,8 +818,17 @@ impl ProxyManager {
         }
     }
 
-    pub async fn get_logs(&self, id: &str, offset: usize, limit: usize) -> Result<LogResponse, CoreError> {
-        let entry = self.config.read().await.find_entry(id)
+    pub async fn get_logs(
+        &self,
+        id: &str,
+        offset: usize,
+        limit: usize,
+    ) -> Result<LogResponse, CoreError> {
+        let entry = self
+            .config
+            .read()
+            .await
+            .find_entry(id)
             .ok_or_else(|| CoreError::NotFound(id.to_string()))?
             .clone();
 
@@ -812,7 +877,9 @@ pub async fn list_entries(State(state): State<AppState>) -> Json<Vec<serde_json:
         .map(|e| {
             let mut val = serde_json::to_value(&e).unwrap();
             let running = proxies.contains_key(&e.id);
-            val.as_object_mut().unwrap().insert("_running".into(), running.into());
+            val.as_object_mut()
+                .unwrap()
+                .insert("_running".into(), running.into());
             val
         })
         .collect();
@@ -833,7 +900,10 @@ pub async fn get_entry(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<String>,
 ) -> Result<Json<ForwardingEntry>, CoreError> {
-    let entry = state.manager.get_entry(&id).await
+    let entry = state
+        .manager
+        .get_entry(&id)
+        .await
         .ok_or_else(|| CoreError::NotFound(id))?;
     Ok(Json(entry))
 }

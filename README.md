@@ -1,35 +1,54 @@
 # PortHannis — 端口转发管理器
 
-轻量级端口转发管理工具，Rust 核心 + Web UI。
+轻量级端口转发管理工具，Rust 核心 + 内嵌 WebUI，单二进制部署。
 
 ## 特性
 
 - **TCP 端口转发** — 高性能异步 TCP 代理，支持双向数据转发
-- **JSON 配置管理** — 单文件配置（port.json），人工可编辑
+- **JSON 配置管理** — 单文件配置（port.json），人工可编辑，首次运行自动创建
 - **日志轮转** — 每条目独立日志，1MB × 5 文件轮转
 - **REST API** — 完整的 CRUD + 启停控制 API
-- **WebUI** — 通过浏览器管理，支持 7777 端口访问
-- **单文件核心** — server/core.rs 包含所有核心逻辑
+- **内嵌 WebUI** — 单 HTML 文件内嵌于二进制，浏览器自动打开
+- **Tauri 桌面应用** — Windows GUI 便携版，免安装直接运行
 
 ## 快速开始
 
-### 运行服务器
+### Windows
+
+从 [Releases](https://github.com/xxx/porthannis/releases) 下载 **PortHannis-windows-portable.exe**，双击运行。
+浏览器自动打开 Web 管理界面，`port.json` 首次运行自动创建。
+
+### Ubuntu / Debian
+
+**方式一：下载预编译二进制**
+
+从 [Releases](https://github.com/xxx/porthannis/releases) 下载 `porthannis`：
 
 ```bash
-# 直接运行
-run.bat
-
-# 或使用 cargo
-cargo run -p porthannis-server
+chmod +x porthannis
+./porthannis
 ```
 
-服务器将在 `http://127.0.0.1:7777` 启动，浏览器会自动打开。
-
-### 构建发布版本
+**方式二：从源码运行**
 
 ```bash
-cargo build --release -p porthannis-server
-# 可执行文件: target/release/porthannis.exe
+# 安装 Rust 工具链
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 克隆并运行
+git clone https://github.com/xxx/porthannis.git
+cd porthannis
+cargo run --release -p porthannis-server
+```
+
+服务器将在 `http://127.0.0.1:7777` 启动，浏览器自动打开。首次运行时自动创建 `port.json`。
+
+### macOS / 其他平台
+
+```bash
+git clone https://github.com/xxx/porthannis.git
+cd porthannis
+cargo run --release -p porthannis-server
 ```
 
 ## API 文档
@@ -88,19 +107,27 @@ curl -X POST http://127.0.0.1:7777/api/entries \
 ## 技术栈
 
 - **Rust** — 核心后端 + Axum HTTP 框架 + Tokio 异步
-- **React + TypeScript** — Web 前端（开发中）
+- **Tauri 2** — Windows 桌面应用（WebView 包装）
+- **vanilla HTML/CSS/JS** — WebUI 内嵌于二进制（无前端构建步骤）
 - **JSON** — 配置持久化（无数据库依赖）
 
 ## 项目结构
 
 ```
 port-hannis/
-├── port.json          # 配置文件
+├── port.json              # 配置文件（运行时自动创建）
+├── Cargo.toml             # Rust workspace
 ├── server/
-│   ├── core.rs        # TCP 转发核心（~800 行）
-│   └── src/main.rs    # HTTP API 服务器
-├── frontend/          # Web UI（开发中）
-└── logs/              # 日志目录
+│   ├── core.rs            # TCP 转发核心（~900 行，单文件）
+│   ├── web.html           # 内嵌 WebUI（单文件，~300 行）
+│   └── src/main.rs        # HTTP API 服务器
+├── gui/
+│   ├── src/main.rs        # Tauri 桌面应用入口
+│   ├── src/lib.rs         # Tauri 库
+│   ├── tauri.conf.json    # Tauri 配置
+│   ├── dist/              # Tauri 前端占位
+│   └── icons/             # 应用图标
+└── logs/                  # 日志目录（运行时生成）
 ```
 
 ## 从源码构建
@@ -108,13 +135,19 @@ port-hannis/
 ### 前置条件
 
 - Rust 1.85+
-- Node.js 22+（构建前端）
 
-### 构建服务器
+### 构建 headless 服务器
 
 ```bash
 cargo build --release -p porthannis-server
-# 二进制位于: target/release/porthannis.exe
+# 二进制位于: target/release/porthannis (或 .exe)
+```
+
+### 构建 Windows GUI 桌面应用
+
+```bash
+cargo build --release -p porthannis-gui
+# 二进制位于: target/release/porthannis-gui.exe
 ```
 
 ## License

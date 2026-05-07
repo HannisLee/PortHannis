@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-windows:
+    name: Build Windows (PortHannis-windows-portable.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Tauri GUI
+        run: cargo build --release -p porthannis-gui
+
+      - name: Rename artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path upload | Out-Null
+          Copy-Item target/release/porthannis-gui.exe upload/PortHannis-windows-portable.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: upload/PortHannis-windows-portable.exe
+
+  build-linux:
+    name: Build Linux (headless)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build headless server
+        run: cargo build --release -p porthannis-server
+
+      - name: Organize artifact
+        run: |
+          mkdir -p upload
+          cp target/release/porthannis upload/porthannis
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: upload/porthannis
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-artifact'
+          merge-multiple: true
+
+      - name: Generate release notes
+        run: |
+          cat > release-notes.md << 'EOF'
+          ## PortHannis ${{ github.ref_name }}
+
+          ### Windows
+          下载 **PortHannis-windows-portable.exe**，双击运行即可。
+          浏览器会自动打开 Web 管理界面，配置文件 `port.json` 首次运行时自动创建。
+
+          ### Linux / Ubuntu
+          下载 `porthannis` 二进制文件：
+          ```bash
+          chmod +x porthannis
+          ./porthannis
+          ```
+          浏览器自动打开 `http://127.0.0.1:7777`。
+
+          或从源码运行：
+          ```bash
+          git clone https://github.com/xxx/porthannis.git
+          cd porthannis
+          cargo run --release -p porthannis-server
+          ```
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            PortHannis-windows-portable.exe
+            porthannis

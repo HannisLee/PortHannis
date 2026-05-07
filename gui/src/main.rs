@@ -38,7 +38,9 @@ fn main() {
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
         rt.block_on(async move {
-            let manager = ProxyManager::new().await.expect("Failed to create ProxyManager");
+            let manager = ProxyManager::new()
+                .await
+                .expect("Failed to create ProxyManager");
             manager.auto_start_enabled().await;
 
             let app_state = AppState {
@@ -70,7 +72,10 @@ fn main() {
 fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(health_check))
-        .route("/api/entries", get(core::list_entries).post(core::create_entry))
+        .route(
+            "/api/entries",
+            get(core::list_entries).post(core::create_entry),
+        )
         .route(
             "/api/entries/{id}",
             get(core::get_entry)
