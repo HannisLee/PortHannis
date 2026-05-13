@@ -143,7 +143,11 @@ fn cmd_list() -> anyhow::Result<()> {
             e.source_port.to_string(),
             e.target_address.clone(),
             e.target_port.to_string(),
-            if e.enabled { "是".to_string() } else { "否".to_string() },
+            if e.enabled {
+                "是".to_string()
+            } else {
+                "否".to_string()
+            },
         ]);
     }
 
