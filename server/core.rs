@@ -74,6 +74,7 @@ fn default_enabled() -> bool {
 pub struct PartialUpdate {
     pub name: Option<String>,
     pub source_port: Option<u16>,
+    pub source_address: Option<String>,
     pub target_address: Option<String>,
     pub target_port: Option<u16>,
     pub enabled: Option<bool>,
@@ -485,6 +486,12 @@ impl ConfigStore {
                 return Err(CoreError::Validation("端口必须在 1-65535 之间".into()));
             }
             updated.source_port = source_port;
+        }
+        if let Some(source_address) = updates.source_address {
+            if source_address.trim().is_empty() {
+                return Err(CoreError::Validation("源地址不能为空".into()));
+            }
+            updated.source_address = source_address;
         }
         if let Some(target_address) = updates.target_address {
             if target_address.trim().is_empty() {

@@ -41,6 +41,10 @@ enum Commands {
         #[arg(short = 's', long)]
         source_port: u16,
 
+        /// 源地址（监听地址，默认 0.0.0.0 即所有网卡）
+        #[arg(long, default_value = "0.0.0.0")]
+        source_address: String,
+
         /// 目标地址
         #[arg(short = 'a', long)]
         target_address: String,
@@ -63,6 +67,10 @@ enum Commands {
         #[arg(short = 's', long)]
         source_port: Option<u16>,
 
+        /// 新源地址
+        #[arg(long)]
+        source_address: Option<String>,
+
         /// 新目标地址
         #[arg(short = 'a', long)]
         target_address: Option<String>,
@@ -78,9 +86,13 @@ enum Commands {
 
     /// 启动 Web 管理界面
     Serve {
+        /// 监听端口
+        #[arg(short, long, default_value_t = 7777)]
+        port: u16,
+
         /// 监听地址
-        #[arg(long, default_value = "127.0.0.1:7777")]
-        addr: String,
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
 
         /// 不自动打开浏览器
         #[arg(long)]
@@ -100,19 +112,39 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::Add {
             name,
             source_port,
+            source_address,
             target_address,
             target_port,
-        }) => cmd_add(name, source_port, target_address, target_port)?,
+        }) => cmd_add(
+            name,
+            source_port,
+            source_address,
+            target_address,
+            target_port,
+        )?,
         Some(Commands::Modify {
             id,
             name,
             source_port,
+            source_address,
             target_address,
             target_port,
             enabled,
-        }) => cmd_modify(id, name, source_port, target_address, target_port, enabled)?,
-        Some(Commands::Serve { addr, no_open }) => {
-            run_server(addr, no_open)?;
+        }) => cmd_modify(
+            id,
+            name,
+            source_port,
+            source_address,
+            target_address,
+            target_port,
+            enabled,
+        )?,
+        Some(Commands::Serve {
+            port,
+            host,
+            no_open,
+        }) => {
+            run_server(host, port, no_open)?;
         }
     }
 
@@ -134,12 +166,21 @@ fn cmd_list() -> anyhow::Result<()> {
     table
         .load_preset(UTF8_FULL)
         .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["ID", "名称", "源端口", "目标地址", "目标端口", "启用"]);
+        .set_header(vec![
+            "ID",
+            "名称",
+            "监听地址",
+            "源端口",
+            "目标地址",
+            "目标端口",
+            "启用",
+        ]);
 
     for e in entries {
         table.add_row(vec![
             e.id.clone(),
             e.name.clone(),
+            e.source_address.clone(),
             e.source_port.to_string(),
             e.target_address.clone(),
             e.target_port.to_string(),
@@ -158,13 +199,14 @@ fn cmd_list() -> anyhow::Result<()> {
 fn cmd_add(
     name: String,
     source_port: u16,
+    source_address: String,
     target_address: String,
     target_port: u16,
 ) -> anyhow::Result<()> {
     let mut store = ConfigStore::load()?;
     let req = core::EntryRequest {
         name,
-        source_address: "0.0.0.0".to_string(),
+        source_address,
         source_port,
         target_address,
         target_port,
@@ -179,17 +221,19 @@ fn cmd_modify(
     id: String,
     name: Option<String>,
     source_port: Option<u16>,
+    source_address: Option<String>,
     target_address: Option<String>,
     target_port: Option<u16>,
     enabled: Option<bool>,
 ) -> anyhow::Result<()> {
     if name.is_none()
         && source_port.is_none()
+        && source_address.is_none()
         && target_address.is_none()
         && target_port.is_none()
         && enabled.is_none()
     {
-        println!("未指定任何修改项。请使用 --name/--source-port/--target-address/--target-port/--enabled 参数。");
+        println!("未指定任何修改项。请使用 --name/--source-port/--source-address/--target-address/--target-port/--enabled 参数。");
         return Ok(());
     }
 
@@ -197,6 +241,7 @@ fn cmd_modify(
     let updates = PartialUpdate {
         name,
         source_port,
+        source_address,
         target_address,
         target_port,
         enabled,
@@ -207,7 +252,7 @@ fn cmd_modify(
 }
 
 #[tokio::main]
-async fn run_server(addr: String, no_open: bool) -> anyhow::Result<()> {
+async fn run_server(host: String, port: u16, no_open: bool) -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -241,6 +286,8 @@ async fn run_server(addr: String, no_open: bool) -> anyhow::Result<()> {
         .fallback(serve_frontend)
         .layer(CorsLayer::permissive())
         .with_state(app_state);
+
+    let addr = format!("{}:{}", host, port);
 
     println!("PortHannis 管理服务启动: http://{}", addr);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
