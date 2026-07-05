@@ -1,6 +1,6 @@
 [package]
 name = "portcli"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2021"
 
 [dependencies]
@@ -17,3 +17,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "local-time"] }
 chrono = "0.4"
 rand = "0.8"
+libc = "0.2"

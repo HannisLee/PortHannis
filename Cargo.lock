@@ -500,12 +500,13 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "portcli"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "chrono",
  "clap",
  "directories",
+ "libc",
  "rand",
  "serde",
  "serde_json",

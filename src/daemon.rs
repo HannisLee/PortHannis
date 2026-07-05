@@ -43,6 +43,21 @@ fn spawn_background_daemon() -> Result<()> {
         cmd.creation_flags(DETACHED_PROCESS);
     }
 
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            cmd.pre_exec(|| {
+                // 创建新会话，脱离控制终端和原进程组。
+                // 这样关闭终端时守护进程不会收到 SIGHUP，可在后台持续运行。
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+    }
+
     let child = cmd.spawn().context("failed to start daemon process")?;
     println!("daemon started (pid: {})", child.id());
     Ok(())

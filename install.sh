@@ -3,11 +3,14 @@ set -eu
 
 REPO="${PORTCLI_REPO:-HannisLee/PortCLI}"
 VERSION="${PORTCLI_VERSION:-latest}"
-INSTALL_DIR="${PORTCLI_INSTALL_DIR:-/usr/local/bin}"
 BINARY_NAME="portcli"
 
 info() {
   printf '%s\n' "info: $*"
+}
+
+warn() {
+  printf '%s\n' "warning: $*" >&2
 }
 
 fail() {
@@ -26,6 +29,15 @@ need_cmd sed
 need_cmd tar
 need_cmd mktemp
 need_cmd uname
+need_cmd mkdir
+need_cmd rm
+
+if [ -z "${PORTCLI_INSTALL_DIR:-}" ]; then
+  [ -n "${HOME:-}" ] || fail "HOME is not set. Please set PORTCLI_INSTALL_DIR manually."
+  INSTALL_DIR="$HOME/.local/bin"
+else
+  INSTALL_DIR="$PORTCLI_INSTALL_DIR"
+fi
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -54,12 +66,16 @@ ARCHIVE="portcli-v${VERSION}-${TARGET}.tar.gz"
 DOWNLOAD_URL="${PORTCLI_DOWNLOAD_URL:-https://github.com/$REPO/releases/download/v$VERSION/$ARCHIVE}"
 
 TMP_DIR="$(mktemp -d)"
+
 cleanup() {
   rm -rf "$TMP_DIR"
 }
+
 trap cleanup EXIT INT TERM
 
+info "install dir: $INSTALL_DIR"
 info "downloading $DOWNLOAD_URL"
+
 curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$ARCHIVE"
 
 info "extracting $ARCHIVE"
@@ -68,23 +84,21 @@ tar -xzf "$TMP_DIR/$ARCHIVE" -C "$TMP_DIR"
 BIN_PATH="$(find "$TMP_DIR" -type f -name "$BINARY_NAME" | sed -n '1p')"
 [ -n "$BIN_PATH" ] || fail "archive does not contain $BINARY_NAME"
 
-if [ ! -d "$INSTALL_DIR" ]; then
-  if mkdir -p "$INSTALL_DIR" 2>/dev/null; then
-    :
-  elif command -v sudo >/dev/null 2>&1; then
-    sudo mkdir -p "$INSTALL_DIR"
-  else
-    fail "cannot create $INSTALL_DIR. Set PORTCLI_INSTALL_DIR to a writable directory or install sudo."
-  fi
-fi
+mkdir -p "$INSTALL_DIR" || fail "cannot create $INSTALL_DIR"
+
+[ -w "$INSTALL_DIR" ] || fail "install dir is not writable: $INSTALL_DIR"
 
 DEST="$INSTALL_DIR/$BINARY_NAME"
-if install -m 0755 "$BIN_PATH" "$DEST" 2>/dev/null; then
-  :
-elif command -v sudo >/dev/null 2>&1; then
-  sudo install -m 0755 "$BIN_PATH" "$DEST"
-else
-  fail "cannot write $DEST. Set PORTCLI_INSTALL_DIR to a writable directory or install sudo."
-fi
+
+install -m 0755 "$BIN_PATH" "$DEST" || fail "cannot install to $DEST"
 
 info "installed $("$DEST" --version) to $DEST"
+
+case ":$PATH:" in
+  *":$INSTALL_DIR:"*) ;;
+  *)
+    warn "$INSTALL_DIR is not in your PATH"
+    warn "add this line to your shell profile:"
+    warn "  export PATH=\"$INSTALL_DIR:\$PATH\""
+    ;;
+esac
